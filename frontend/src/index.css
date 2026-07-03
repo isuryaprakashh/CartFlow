@@ -972,7 +972,7 @@ a {
 /* ===== Toast / Notifications ===== */
 .toast-container {
   position: fixed;
-  top: 80px;
+  top: 85px;
   right: 1.5rem;
   z-index: 200;
   display: flex;
