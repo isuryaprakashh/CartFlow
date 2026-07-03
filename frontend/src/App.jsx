@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import ProductForm from './components/ProductForm';
 import Home from './pages/Home';
@@ -14,9 +14,21 @@ import Checkout from './pages/Checkout';
 import OrderHistory from './pages/OrderHistory';
 
 function Footer() {
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('user')));
+
+  useEffect(() => {
+    const handler = () => {
+      setCurrentUser(JSON.parse(localStorage.getItem('user')));
+    };
+    window.addEventListener('auth-change', handler);
+    return () => window.removeEventListener('auth-change', handler);
+  }, []);
+
+  const isAdmin = currentUser?.roles?.includes('ROLE_ADMIN');
+
   return (
     <footer className="footer">
-      <div className="footer-main">
+      <div className="footer-main" style={{ gridTemplateColumns: '1.5fr 1fr 1fr 1fr' }}>
         <div>
           <div className="footer-brand">
             <span className="footer-brand-icon">C</span>
@@ -36,40 +48,42 @@ function Footer() {
         </div>
 
         <div className="footer-column">
-          <h4>Company</h4>
+          <h4>Quick Links</h4>
           <ul>
-            <li><a href="#">About Us</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Contact Us</a></li>
-            <li><a href="#">Career</a></li>
+            <li><Link to="/">Home</Link></li>
+            <li><Link to="/products">Browse Products</Link></li>
+            {!isAdmin && <li><Link to="/cart">Shopping Cart</Link></li>}
           </ul>
         </div>
 
         <div className="footer-column">
-          <h4>Customer Services</h4>
+          <h4>My Account</h4>
           <ul>
-            <li><a href="#">My Account</a></li>
-            <li><a href="#">Track Your Order</a></li>
-            <li><a href="#">Return</a></li>
-            <li><a href="#">FAQ</a></li>
-          </ul>
-        </div>
-
-        <div className="footer-column">
-          <h4>Our Information</h4>
-          <ul>
-            <li><a href="#">Privacy</a></li>
-            <li><a href="#">User Terms & Condition</a></li>
-            <li><a href="#">Return Policy</a></li>
+            {currentUser ? (
+              <>
+                <li><Link to={isAdmin ? "/admin/dashboard" : "/dashboard"}>My Dashboard</Link></li>
+                {!isAdmin && (
+                  <>
+                    <li><Link to="/orders">Order History</Link></li>
+                    <li><Link to="/wishlist">My Wishlist</Link></li>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <li><Link to="/login">Login</Link></li>
+                <li><Link to="/register">Create Account</Link></li>
+              </>
+            )}
           </ul>
         </div>
 
         <div className="footer-column">
           <h4>Contact Info</h4>
           <ul>
-            <li><a href="#">+0123-456-789</a></li>
-            <li><a href="#">example@gmail.com</a></li>
-            <li><a href="#">8502 Preston Rd, Inglewood, Maine 98380</a></li>
+            <li><a href="tel:+0123456789">+0123-456-789</a></li>
+            <li><a href="mailto:support@cartflow.com">support@cartflow.com</a></li>
+            <li>8502 Preston Rd, Inglewood, Maine 98380</li>
           </ul>
         </div>
       </div>

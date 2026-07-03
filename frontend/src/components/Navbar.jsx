@@ -59,9 +59,9 @@ export default function Navbar() {
       {/* Top Banner */}
       {showBanner && (
         <div className="top-banner" id="top-banner">
-          <span className="top-banner-left">Support (406) 555-0120</span>
+          {/* <span className="top-banner-left">Support (406) 555-0120</span> */}
           <span className="top-banner-center">
-            Use DISCOUNT25 and GET 25% OFF for your first order.
+            Use <b>DISCOUNT25</b> and GET 25% OFF for your first order.
             <NavLink to="/register" style={{ color: 'white', textDecoration: 'underline' }}>Sign up now</NavLink>
           </span>
           <button
