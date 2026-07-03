@@ -126,14 +126,14 @@ export default function Navbar() {
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   Hi, {currentUser.username}
                 </span>
-                {!isAdmin && (
+                {/* {!isAdmin && (
                   <NavLink to="/cart" className="nav-icon-btn" style={{ position: 'relative' }}>
                     🛒
                     {cartCount > 0 && (
                       <span className="nav-cart-badge">{cartCount}</span>
                     )}
                   </NavLink>
-                )}
+                )} */}
                 <button onClick={handleLogout} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
                   Logout
                 </button>

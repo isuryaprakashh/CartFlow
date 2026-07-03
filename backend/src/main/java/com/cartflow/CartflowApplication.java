@@ -24,8 +24,17 @@ public class CartflowApplication {
             }
 
             try {
-                jdbcTemplate.execute("INSERT IGNORE INTO categories (name) VALUES ('Outerwear'), ('Footwear'), ('Accessories'), ('Apparel'), ('Electronics')");
-                System.out.println("Successfully seeded default categories.");
+                jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+                jdbcTemplate.execute("TRUNCATE TABLE categories");
+                jdbcTemplate.execute("INSERT INTO categories (id, name) VALUES " +
+                        "(1, 'Electronics'), " +
+                        "(2, 'Fashion'), " +
+                        "(3, 'Footwear'), " +
+                        "(4, 'Accessories'), " +
+                        "(5, 'Home & Kitchen'), " +
+                        "(6, 'Grocery')");
+                jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+                System.out.println("Successfully seeded default categories (1-6).");
             } catch (Exception e) {
                 System.out.println("Database seeding info: " + e.getMessage());
             }
