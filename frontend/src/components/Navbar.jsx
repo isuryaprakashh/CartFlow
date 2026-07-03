@@ -123,8 +123,8 @@ export default function Navbar() {
           <div className="navbar-actions">
             {currentUser ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Hi, {currentUser.username}
+                <span style={{ fontSize: '0.82rem', color: 'var(--brown-dark)' }}>
+                  Hi, <b>{currentUser.username.toUpperCase()}</b>
                 </span>
                 {/* {!isAdmin && (
                   <NavLink to="/cart" className="nav-icon-btn" style={{ position: 'relative' }}>
