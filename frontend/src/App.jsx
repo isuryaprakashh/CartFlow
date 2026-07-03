@@ -1,10 +1,17 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import ProductForm from './components/ProductForm';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import Cart from './pages/Cart';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import CustomerDashboard from './pages/CustomerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import Wishlist from './pages/Wishlist';
+import Checkout from './pages/Checkout';
+import OrderHistory from './pages/OrderHistory';
 
 function Footer() {
   return (
@@ -75,6 +82,17 @@ function Footer() {
   );
 }
 
+function ProtectedRoute({ element, adminOnly = false }) {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (adminOnly && !user.roles?.includes('ROLE_ADMIN')) {
+    return <Navigate to="/" replace />;
+  }
+  return element;
+}
+
 function App() {
   const [toasts, setToasts] = useState([]);
 
@@ -101,11 +119,23 @@ function App() {
         </div>
 
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products onToast={addToast} />} />
-          <Route path="/products/add" element={<ProductForm onToast={addToast} />} />
-          <Route path="/products/edit/:id" element={<ProductForm onToast={addToast} />} />
-          <Route path="/cart" element={<Cart onToast={addToast} />} />
+          <Route path="/login" element={<Login onToast={addToast} />} />
+          <Route path="/register" element={<Register onToast={addToast} />} />
+
+          {/* Customer Protected Routes */}
+          <Route path="/cart" element={<ProtectedRoute element={<Cart onToast={addToast} />} />} />
+          <Route path="/checkout" element={<ProtectedRoute element={<Checkout onToast={addToast} />} />} />
+          <Route path="/wishlist" element={<ProtectedRoute element={<Wishlist onToast={addToast} />} />} />
+          <Route path="/orders" element={<ProtectedRoute element={<OrderHistory onToast={addToast} />} />} />
+          <Route path="/dashboard" element={<ProtectedRoute element={<CustomerDashboard onToast={addToast} />} />} />
+
+          {/* Admin Protected Routes */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true} element={<AdminDashboard onToast={addToast} />} />} />
+          <Route path="/products/add" element={<ProtectedRoute adminOnly={true} element={<ProductForm onToast={addToast} />} />} />
+          <Route path="/products/edit/:id" element={<ProtectedRoute adminOnly={true} element={<ProductForm onToast={addToast} />} />} />
         </Routes>
 
         <Footer />

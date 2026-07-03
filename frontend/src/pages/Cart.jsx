@@ -1,28 +1,41 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getCart, clearCart } from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { getCart, clearCart, getSavedItems, removeSavedItem, addToCart, validateCoupon } from '../services/api';
 import CartItemRow from '../components/CartItemRow';
 
 export default function Cart({ onToast }) {
   const [items, setItems] = useState([]);
+  const [savedItems, setSavedItems] = useState([]);
   const [summary, setSummary] = useState({ totalItems: 0, totalQuantity: 0, totalPrice: 0 });
+  
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discount, setDiscount] = useState(0.0);
+  
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const fetchCart = async () => {
+  const fetchCartAndSaved = async () => {
     setLoading(true);
     try {
-      const res = await getCart();
-      setItems(res.data.items || []);
-      setSummary(res.data.summary || { totalItems: 0, totalQuantity: 0, totalPrice: 0 });
+      const [cartRes, savedRes] = await Promise.all([getCart(), getSavedItems()]);
+      setItems(cartRes.data.items || []);
+      setSummary(cartRes.data.summary || { totalItems: 0, totalQuantity: 0, totalPrice: 0 });
+      setSavedItems(savedRes.data || []);
+      
+      // Reset coupon if cart changes or total price becomes 0
+      setAppliedCoupon(null);
+      setDiscount(0.0);
+      setCouponCode('');
     } catch {
-      onToast('Failed to load cart', 'error');
+      onToast('Failed to load cart and saved items', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCart();
+    fetchCartAndSaved();
   }, []);
 
   const handleClearCart = async () => {
@@ -30,12 +43,60 @@ export default function Cart({ onToast }) {
     try {
       await clearCart();
       onToast('Cart cleared', 'success');
-      fetchCart();
+      fetchCartAndSaved();
       window.dispatchEvent(new Event('cart-updated'));
     } catch {
       onToast('Failed to clear cart', 'error');
     }
   };
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    try {
+      const res = await validateCoupon(couponCode.trim());
+      setAppliedCoupon(res.data);
+      const subtotal = summary.totalPrice;
+      let calculatedDiscount = 0.0;
+      if (res.data.discountType === 'PERCENTAGE') {
+        calculatedDiscount = subtotal * (res.data.discountAmount / 100.0);
+      } else {
+        calculatedDiscount = res.data.discountAmount;
+      }
+      setDiscount(calculatedDiscount);
+      onToast('Coupon applied successfully!', 'success');
+    } catch (err) {
+      setAppliedCoupon(null);
+      setDiscount(0.0);
+      onToast(err.response?.data?.message || 'Invalid or expired coupon code', 'error');
+    }
+  };
+
+  const handleRemoveSaved = async (id) => {
+    try {
+      await removeSavedItem(id);
+      onToast('Saved item removed', 'success');
+      fetchCartAndSaved();
+    } catch {
+      onToast('Failed to remove saved item', 'error');
+    }
+  };
+
+  const handleMoveToCart = async (id, productId, name) => {
+    try {
+      // Add to cart
+      await addToCart(productId, 1);
+      // Remove from saved
+      await removeSavedItem(id);
+      onToast(`"${name}" moved to cart`, 'success');
+      fetchCartAndSaved();
+      window.dispatchEvent(new Event('cart-updated'));
+    } catch (err) {
+      onToast(err.response?.data?.message || 'Failed to move saved item to cart', 'error');
+    }
+  };
+
+  const totalAmount = Math.max(0.0, summary.totalPrice - discount);
 
   if (loading) {
     return (
@@ -89,7 +150,7 @@ export default function Cart({ onToast }) {
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      onRefresh={fetchCart}
+                      onRefresh={fetchCartAndSaved}
                       onToast={onToast}
                     />
                   ))}
@@ -103,8 +164,10 @@ export default function Cart({ onToast }) {
                       className="coupon-input"
                       placeholder="Coupon Code"
                       id="coupon-input"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
                     />
-                    <button className="coupon-btn" id="btn-apply-coupon">
+                    <button className="coupon-btn" id="btn-apply-coupon" onClick={handleApplyCoupon}>
                       Apply Coupon
                     </button>
                   </div>
@@ -113,6 +176,45 @@ export default function Cart({ onToast }) {
                   </button>
                 </div>
               </div>
+
+              {/* Save for later section */}
+              {savedItems.length > 0 && (
+                <div style={{ marginTop: '2rem' }}>
+                  <h3 className="page-title" style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Saved for Later</h3>
+                  <div className="cart-table">
+                    <div className="cart-table-header" style={{ gridTemplateColumns: '50% 20% 30%' }}>
+                      <div>Product</div>
+                      <div>Price</div>
+                      <div>Actions</div>
+                    </div>
+                    <div className="cart-table-body">
+                      {savedItems.map((sItem) => (
+                        <div key={sItem.id} className="cart-item" style={{ gridTemplateColumns: '50% 20% 30%', alignItems: 'center' }}>
+                          <div className="cart-item-product">
+                            <button className="cart-item-remove" onClick={() => handleRemoveSaved(sItem.id)}>✕</button>
+                            <div className="cart-item-image">
+                              {sItem.product.imageUrl ? <img src={sItem.product.imageUrl} alt={sItem.product.name} /> : '📦'}
+                            </div>
+                            <div>
+                              <div className="cart-item-name">{sItem.product.name}</div>
+                              <div className="cart-item-meta">Category: {sItem.product.category?.name || 'N/A'}</div>
+                            </div>
+                          </div>
+                          <div className="cart-item-price">${sItem.product.price.toFixed(2)}</div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn btn-primary btn-sm" onClick={() => handleMoveToCart(sItem.id, sItem.product.id, sItem.product.name)}>
+                              Move to Cart
+                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleRemoveSaved(sItem.id)}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Features Bar */}
               <div className="features-bar">
@@ -152,6 +254,12 @@ export default function Cart({ onToast }) {
                   <span className="summary-row-label">Sub Total</span>
                   <span className="summary-row-value">${summary.totalPrice.toFixed(2)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="summary-row">
+                    <span className="summary-row-label" style={{ color: '#27ae60' }}>Coupon Discount</span>
+                    <span className="summary-row-value" style={{ color: '#27ae60' }}>-${discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="summary-row">
                   <span className="summary-row-label">Shipping</span>
                   <span className="summary-row-value">$00.00</span>
@@ -160,17 +268,13 @@ export default function Cart({ onToast }) {
                   <span className="summary-row-label">Taxes</span>
                   <span className="summary-row-value">$00.00</span>
                 </div>
-                <div className="summary-row">
-                  <span className="summary-row-label">Coupon Discount</span>
-                  <span className="summary-row-value">-</span>
-                </div>
                 <div className="summary-row summary-total">
                   <span className="summary-row-label">Total</span>
-                  <span className="summary-row-value">${summary.totalPrice.toFixed(2)}</span>
+                  <span className="summary-row-value">${totalAmount.toFixed(2)}</span>
                 </div>
               </div>
               <div className="order-summary-footer">
-                <button className="btn-checkout" id="btn-checkout">
+                <button className="btn-checkout" id="btn-checkout" onClick={() => navigate('/checkout')}>
                   Proceed to Checkout
                 </button>
               </div>

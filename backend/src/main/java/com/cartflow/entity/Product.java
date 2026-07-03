@@ -24,9 +24,9 @@ public class Product {
     @Column(nullable = false, unique = true)
     private String sku;
 
-    @NotBlank(message = "Category is required")
-    @Column(nullable = false)
-    private String category;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id", nullable = true)
+    private Category category;
 
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be greater than 0")
@@ -37,4 +37,7 @@ public class Product {
     @Min(value = 0, message = "Quantity must be greater than or equal to 0")
     @Column(nullable = false)
     private Integer quantity;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

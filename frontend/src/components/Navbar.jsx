@@ -1,26 +1,58 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getCart } from '../services/api';
 
 export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [showBanner, setShowBanner] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
 
-  const fetchCartCount = async () => {
-    try {
-      const res = await getCart();
-      setCartCount(res.data.summary?.totalItems || 0);
-    } catch {
+  const fetchCartCount = () => {
+    if (!localStorage.getItem('user')) {
       setCartCount(0);
+      return;
     }
+    getCart()
+      .then((res) => {
+        setCartCount(res.data.summary?.totalItems || 0);
+      })
+      .catch(() => {
+        setCartCount(0);
+      });
+  };
+
+  const checkUserSession = () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    setCurrentUser(user);
+    fetchCartCount();
   };
 
   useEffect(() => {
-    fetchCartCount();
-    const handler = () => fetchCartCount();
-    window.addEventListener('cart-updated', handler);
-    return () => window.removeEventListener('cart-updated', handler);
+    checkUserSession();
+    // Listen for custom events
+    const cartHandler = () => fetchCartCount();
+    const authHandler = () => checkUserSession();
+
+    window.addEventListener('cart-updated', cartHandler);
+    window.addEventListener('auth-change', authHandler);
+
+    return () => {
+      window.removeEventListener('cart-updated', cartHandler);
+      window.removeEventListener('auth-change', authHandler);
+    };
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setCurrentUser(null);
+    setCartCount(0);
+    window.dispatchEvent(new Event('auth-change'));
+    window.dispatchEvent(new Event('cart-updated'));
+    navigate('/');
+  };
+
+  const isAdmin = currentUser?.roles?.includes('ROLE_ADMIN');
 
   return (
     <>
@@ -29,8 +61,8 @@ export default function Navbar() {
         <div className="top-banner" id="top-banner">
           <span className="top-banner-left">Support (406) 555-0120</span>
           <span className="top-banner-center">
-            Sign up and GET 25% OFF for your first order.
-            <a href="#">Sign up now</a>
+            Use DISCOUNT25 and GET 25% OFF for your first order.
+            <NavLink to="/register" style={{ color: 'white', textDecoration: 'underline' }}>Sign up now</NavLink>
           </span>
           <button
             className="top-banner-close"
@@ -66,25 +98,50 @@ export default function Navbar() {
             >
               Products
             </NavLink>
-            <NavLink
-              to="/cart"
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              id="nav-cart"
-            >
-              Cart
-            </NavLink>
+            {currentUser && (
+              <NavLink
+                to={isAdmin ? '/admin/dashboard' : '/dashboard'}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                id="nav-dashboard"
+              >
+                Dashboard
+              </NavLink>
+            )}
+            {currentUser && !isAdmin && (
+              <NavLink
+                to="/cart"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                id="nav-cart"
+              >
+                Cart
+              </NavLink>
+            )}
           </div>
 
           <div className="navbar-actions">
-            <button className="nav-icon-btn" aria-label="Search">🔍</button>
-            <button className="nav-icon-btn" aria-label="Wishlist">♡</button>
-            <NavLink to="/cart" className="nav-icon-btn" style={{ position: 'relative' }}>
-              🛒
-              {cartCount > 0 && (
-                <span className="nav-cart-badge">{cartCount}</span>
-              )}
-            </NavLink>
-            <button className="nav-icon-btn" aria-label="Account">👤</button>
+            {currentUser ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Hi, {currentUser.username}
+                </span>
+                {!isAdmin && (
+                  <NavLink to="/cart" className="nav-icon-btn" style={{ position: 'relative' }}>
+                    🛒
+                    {cartCount > 0 && (
+                      <span className="nav-cart-badge">{cartCount}</span>
+                    )}
+                  </NavLink>
+                )}
+                <button onClick={handleLogout} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <NavLink to="/login" className="btn btn-secondary btn-sm">Login</NavLink>
+                <NavLink to="/register" className="btn btn-primary btn-sm">Register</NavLink>
+              </div>
+            )}
           </div>
         </div>
       </nav>

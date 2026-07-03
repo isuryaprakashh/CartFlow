@@ -4,10 +4,12 @@ import com.cartflow.dto.CartItemRequest;
 import com.cartflow.dto.CartSummary;
 import com.cartflow.entity.CartItem;
 import com.cartflow.entity.Product;
+import com.cartflow.entity.User;
 import com.cartflow.exception.ResourceNotFoundException;
 import com.cartflow.repository.CartItemRepository;
 import com.cartflow.repository.ProductRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,54 +25,79 @@ public class CartService {
         this.productRepository = productRepository;
     }
 
-    public List<CartItem> getCartItems() {
-        return cartItemRepository.findAll();
+    public List<CartItem> getCartItems(User user) {
+        return cartItemRepository.findByUserId(user.getId());
     }
 
-    public CartItem addToCart(CartItemRequest request) {
+    public CartItem addToCart(User user, CartItemRequest request) {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product", request.getProductId()));
 
-        // If item already in cart, increase quantity
-        Optional<CartItem> existingItem = cartItemRepository.findByProductId(request.getProductId());
+        Optional<CartItem> existingItem = cartItemRepository.findByUserIdAndProductId(user.getId(), request.getProductId());
+        int targetQuantity = request.getQuantity();
+        
+        if (existingItem.isPresent()) {
+            targetQuantity += existingItem.get().getQuantity();
+        }
+
+        // Prevent overselling
+        if (targetQuantity > product.getQuantity()) {
+            throw new IllegalArgumentException("Cannot add requested quantity. Available stock: " + product.getQuantity());
+        }
+
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + request.getQuantity());
+            item.setQuantity(targetQuantity);
             return cartItemRepository.save(item);
         }
 
-        // Otherwise create new cart item
         CartItem cartItem = new CartItem();
+        cartItem.setUser(user);
         cartItem.setProduct(product);
-        cartItem.setQuantity(request.getQuantity());
+        cartItem.setQuantity(targetQuantity);
         return cartItemRepository.save(cartItem);
     }
 
-    public CartItem updateCartItem(Long id, Integer quantity) {
+    public CartItem updateCartItem(User user, Long id, Integer quantity) {
         CartItem cartItem = cartItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item", id));
+
+        if (!cartItem.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Not authorized to update this cart item");
+        }
 
         if (quantity <= 0) {
             cartItemRepository.delete(cartItem);
             return null;
         }
 
+        // Prevent overselling
+        if (quantity > cartItem.getProduct().getQuantity()) {
+            throw new IllegalArgumentException("Cannot update quantity. Available stock: " + cartItem.getProduct().getQuantity());
+        }
+
         cartItem.setQuantity(quantity);
         return cartItemRepository.save(cartItem);
     }
 
-    public void removeFromCart(Long id) {
+    public void removeFromCart(User user, Long id) {
         CartItem cartItem = cartItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item", id));
+
+        if (!cartItem.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Not authorized to remove this cart item");
+        }
+
         cartItemRepository.delete(cartItem);
     }
 
-    public void clearCart() {
-        cartItemRepository.deleteAll();
+    @Transactional
+    public void clearCart(User user) {
+        cartItemRepository.deleteByUserId(user.getId());
     }
 
-    public CartSummary getCartSummary() {
-        List<CartItem> items = cartItemRepository.findAll();
+    public CartSummary getCartSummary(User user) {
+        List<CartItem> items = getCartItems(user);
 
         int totalItems = items.size();
         int totalQuantity = items.stream()
