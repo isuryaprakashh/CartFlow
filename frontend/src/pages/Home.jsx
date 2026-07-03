@@ -1,6 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 export default function Home() {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user && user.roles?.includes('ROLE_ADMIN')) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
   return (
     <>
       {/* Hero Section */}

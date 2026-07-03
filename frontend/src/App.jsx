@@ -43,7 +43,7 @@ function Footer() {
             <span className="footer-social-icon">B</span>
             <span className="footer-social-icon">▶</span>
             <span className="footer-social-icon">𝕏</span>
-            <span className="footer-social-icon">📷</span>
+            {/* <span className="footer-social-icon">📷</span> */}
           </div>
         </div>
 
@@ -81,16 +81,16 @@ function Footer() {
         <div className="footer-column">
           <h4>Contact Info</h4>
           <ul>
-            <li><a href="tel:+0123456789">+0123-456-789</a></li>
+            <li><a href="tel:+0123456789">+91 1234567890</a></li>
             <li><a href="mailto:support@cartflow.com">support@cartflow.com</a></li>
-            <li>8502 Preston Rd, Inglewood, Maine 98380</li>
+            {/* <li>8502 Preston Rd, Inglewood, Maine 98380</li> */}
           </ul>
         </div>
       </div>
 
       <div className="footer-bottom">
-        <span>Copyright © 2024 CartFlow. All Rights Reserved.</span>
-        <span>English ∨ &nbsp;|&nbsp; USD ∨</span>
+        <span>Copyright © 2026 CartFlow. All Rights Reserved.</span>
+        {/* <span>English ∨ &nbsp;|&nbsp; USD ∨</span> */}
       </div>
     </footer>
   );

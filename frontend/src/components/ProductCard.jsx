@@ -1,15 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { deleteProduct, addToCart, addToWishlist, getReviews } from '../services/api';
+import { deleteProduct, addToCart, addToWishlist, getReviews, getWishlist, removeFromWishlist } from '../services/api';
 
 export default function ProductCard({ product, onRefresh, onToast }) {
   const navigate = useNavigate();
   const [avgRating, setAvgRating] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
+  
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistItemId, setWishlistItemId] = useState(null);
 
   useEffect(() => {
     setCurrentUser(JSON.parse(localStorage.getItem('user')));
     fetchReviews();
+    fetchWishlistStatus();
   }, [product.id]);
 
   const fetchReviews = async () => {
@@ -22,6 +26,25 @@ export default function ProductCard({ product, onRefresh, onToast }) {
       }
     } catch {
       // ignore silently
+    }
+  };
+
+  const fetchWishlistStatus = async () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return;
+    try {
+      const res = await getWishlist();
+      const wishlist = res.data || [];
+      const foundItem = wishlist.find(item => item.product.id === product.id);
+      if (foundItem) {
+        setIsWishlisted(true);
+        setWishlistItemId(foundItem.id);
+      } else {
+        setIsWishlisted(false);
+        setWishlistItemId(null);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -58,10 +81,20 @@ export default function ProductCard({ product, onRefresh, onToast }) {
       return;
     }
     try {
-      await addToWishlist(product.id);
-      onToast(`"${product.name}" saved to wishlist`, 'success');
+      if (isWishlisted) {
+        await removeFromWishlist(wishlistItemId);
+        setIsWishlisted(false);
+        setWishlistItemId(null);
+        onToast(`"${product.name}" removed from wishlist`, 'success');
+      } else {
+        const res = await addToWishlist(product.id);
+        setIsWishlisted(true);
+        setWishlistItemId(res.data.id);
+        onToast(`"${product.name}" saved to wishlist`, 'success');
+      }
+      if (onRefresh) onRefresh();
     } catch (err) {
-      onToast(err.response?.data?.message || 'Product already in wishlist', 'error');
+      onToast(err.response?.data?.message || 'Failed to update wishlist', 'error');
     }
   };
 
@@ -77,10 +110,10 @@ export default function ProductCard({ product, onRefresh, onToast }) {
         )}
         <button 
           onClick={handleAddToWishlist} 
-          style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'white', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)', color: 'var(--danger)', fontSize: '1rem' }}
-          title="Add to Wishlist"
+          style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'white', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)', color: isWishlisted ? 'var(--danger)' : '#888', fontSize: '1.25rem' }}
+          title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
         >
-          ❤
+          {isWishlisted ? '♥' : '♡'}
         </button>
       </div>
 

@@ -83,14 +83,16 @@ export default function Navbar() {
           </NavLink>
 
           <div className="navbar-links">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              id="nav-home"
-            >
-              Home
-            </NavLink>
+            {!isAdmin && (
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                id="nav-home"
+              >
+                Home
+              </NavLink>
+            )}
             <NavLink
               to="/products"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}

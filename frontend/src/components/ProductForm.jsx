@@ -93,6 +93,14 @@ export default function ProductForm({ onToast }) {
     }
   };
 
+  const handleClearImage = () => {
+    setForm((prev) => ({ ...prev, imageUrl: '' }));
+    const fileInput = document.getElementById('imageFile');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -235,7 +243,10 @@ export default function ProductForm({ onToast }) {
                 {form.imageUrl && (
                   <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <img src={form.imageUrl} alt="Preview" style={{ width: '60px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{form.imageUrl}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all', flexGrow: 1 }}>{form.imageUrl}</span>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={handleClearImage}>
+                      Clear
+                    </button>
                   </div>
                 )}
               </div>

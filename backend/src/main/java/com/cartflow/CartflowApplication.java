@@ -22,6 +22,13 @@ public class CartflowApplication {
             } catch (Exception e) {
                 System.out.println("Database migration info: " + e.getMessage());
             }
+
+            try {
+                jdbcTemplate.execute("INSERT IGNORE INTO categories (name) VALUES ('Outerwear'), ('Footwear'), ('Accessories'), ('Apparel'), ('Electronics')");
+                System.out.println("Successfully seeded default categories.");
+            } catch (Exception e) {
+                System.out.println("Database seeding info: " + e.getMessage());
+            }
         };
     }
 }
