@@ -52,6 +52,15 @@ public class CouponController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/latest")
+    public ResponseEntity<Coupon> getLatestCoupon() {
+        Coupon coupon = couponService.getLatestActiveCoupon();
+        if (coupon == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(coupon);
+    }
+
     @GetMapping("/validate")
     public ResponseEntity<Coupon> validateCoupon(@RequestParam String code) {
         Coupon coupon = couponService.validateCoupon(code);

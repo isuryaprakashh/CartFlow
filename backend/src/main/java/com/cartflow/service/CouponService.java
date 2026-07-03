@@ -63,4 +63,12 @@ public class CouponService {
         }
         return coupon;
     }
+
+    public Coupon getLatestActiveCoupon() {
+        List<Coupon> coupons = couponRepository.findAll();
+        return coupons.stream()
+                .filter(c -> c.getActive() && !c.getExpiryDate().isBefore(LocalDate.now()))
+                .max(java.util.Comparator.comparing(Coupon::getId))
+                .orElse(null);
+    }
 }

@@ -77,6 +77,7 @@ export default function AdminDashboard({ onToast }) {
       onToast('Coupon created successfully', 'success');
       setNewCoupon({ code: '', discountAmount: '', discountType: 'PERCENTAGE', expiryDate: '' });
       fetchData();
+      window.dispatchEvent(new Event('coupon-updated'));
     } catch (err) {
       onToast(err.response?.data?.message || 'Failed to create coupon', 'error');
     }
@@ -88,6 +89,7 @@ export default function AdminDashboard({ onToast }) {
       await deleteCoupon(id);
       onToast('Coupon deleted', 'success');
       fetchData();
+      window.dispatchEvent(new Event('coupon-updated'));
     } catch {
       onToast('Failed to delete coupon', 'error');
     }

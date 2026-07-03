@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getCart } from '../services/api';
+import { getCart, getLatestCoupon } from '../services/api';
 
 export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [showBanner, setShowBanner] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [latestCoupon, setLatestCoupon] = useState(null);
   const navigate = useNavigate();
 
   const fetchCartCount = () => {
@@ -28,18 +29,35 @@ export default function Navbar() {
     fetchCartCount();
   };
 
+  const fetchLatestPromo = async () => {
+    try {
+      const res = await getLatestCoupon();
+      if (res && res.data) {
+        setLatestCoupon(res.data);
+      } else {
+        setLatestCoupon(null);
+      }
+    } catch {
+      setLatestCoupon(null);
+    }
+  };
+
   useEffect(() => {
     checkUserSession();
+    fetchLatestPromo();
     // Listen for custom events
     const cartHandler = () => fetchCartCount();
     const authHandler = () => checkUserSession();
+    const couponHandler = () => fetchLatestPromo();
 
     window.addEventListener('cart-updated', cartHandler);
     window.addEventListener('auth-change', authHandler);
+    window.addEventListener('coupon-updated', couponHandler);
 
     return () => {
       window.removeEventListener('cart-updated', cartHandler);
       window.removeEventListener('auth-change', authHandler);
+      window.removeEventListener('coupon-updated', couponHandler);
     };
   }, []);
 
@@ -61,7 +79,13 @@ export default function Navbar() {
         <div className="top-banner" id="top-banner">
           {/* <span className="top-banner-left">Support (406) 555-0120</span> */}
           <span className="top-banner-center">
-            Use <b>DISCOUNT25</b> and GET 25% OFF for your first order.
+            {latestCoupon ? (
+              <>
+                Use <b>{latestCoupon.code}</b> and GET {latestCoupon.discountType === 'PERCENTAGE' ? `${latestCoupon.discountAmount}%` : `$${latestCoupon.discountAmount}`} OFF for your order.{' '}
+              </>
+            ) : (
+              <>Use <b>DISCOUNT25</b> and GET 25% OFF for your first order. </>
+            )}
             <NavLink to="/register" style={{ color: 'white', textDecoration: 'underline' }}>Sign up now</NavLink>
           </span>
           <button

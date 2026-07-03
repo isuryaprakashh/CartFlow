@@ -90,6 +90,7 @@ export const createCoupon = (coupon) => API.post('/coupons', coupon);
 export const updateCoupon = (id, coupon) => API.put(`/coupons/${id}`, coupon);
 export const deleteCoupon = (id) => API.delete(`/coupons/${id}`);
 export const validateCoupon = (code) => API.get(`/coupons/validate?code=${code}`);
+export const getLatestCoupon = () => API.get('/coupons/latest');
 
 // ==================
 // Order Endpoints
