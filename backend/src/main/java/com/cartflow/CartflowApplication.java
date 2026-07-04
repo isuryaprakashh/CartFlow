@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class CartflowApplication {
 
     public static void main(String[] args) {

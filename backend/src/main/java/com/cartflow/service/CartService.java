@@ -26,6 +26,13 @@ public class CartService {
     }
 
     public List<CartItem> getCartItems(User user) {
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusMinutes(10);
+        List<CartItem> expired = cartItemRepository.findByUserId(user.getId()).stream()
+                .filter(item -> item.getReservedAt() != null && item.getReservedAt().isBefore(threshold))
+                .toList();
+        if (!expired.isEmpty()) {
+            cartItemRepository.deleteAll(expired);
+        }
         return cartItemRepository.findByUserId(user.getId());
     }
 
@@ -40,14 +47,25 @@ public class CartService {
             targetQuantity += existingItem.get().getQuantity();
         }
 
-        // Prevent overselling
-        if (targetQuantity > product.getQuantity()) {
-            throw new IllegalArgumentException("Cannot add requested quantity. Available stock: " + product.getQuantity());
+        // Calculate active reservations for this product (excluding this user's current item if it exists)
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusMinutes(10);
+        List<CartItem> reservations = cartItemRepository.findByProductId(product.getId());
+        int activeOtherReservations = reservations.stream()
+                .filter(item -> !item.getUser().getId().equals(user.getId()))
+                .filter(item -> item.getReservedAt() != null && item.getReservedAt().isAfter(threshold))
+                .mapToInt(CartItem::getQuantity)
+                .sum();
+
+        int availableQuantity = product.getQuantity() - activeOtherReservations;
+
+        if (targetQuantity > availableQuantity) {
+            throw new IllegalArgumentException("Cannot add requested quantity. Available stock after active reservations: " + availableQuantity);
         }
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
             item.setQuantity(targetQuantity);
+            item.setReservedAt(java.time.LocalDateTime.now());
             return cartItemRepository.save(item);
         }
 
@@ -55,6 +73,7 @@ public class CartService {
         cartItem.setUser(user);
         cartItem.setProduct(product);
         cartItem.setQuantity(targetQuantity);
+        cartItem.setReservedAt(java.time.LocalDateTime.now());
         return cartItemRepository.save(cartItem);
     }
 
@@ -71,12 +90,23 @@ public class CartService {
             return null;
         }
 
-        // Prevent overselling
-        if (quantity > cartItem.getProduct().getQuantity()) {
-            throw new IllegalArgumentException("Cannot update quantity. Available stock: " + cartItem.getProduct().getQuantity());
+        // Calculate active reservations for this product (excluding this cart item)
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusMinutes(10);
+        List<CartItem> reservations = cartItemRepository.findByProductId(cartItem.getProduct().getId());
+        int activeOtherReservations = reservations.stream()
+                .filter(item -> !item.getId().equals(id))
+                .filter(item -> item.getReservedAt() != null && item.getReservedAt().isAfter(threshold))
+                .mapToInt(CartItem::getQuantity)
+                .sum();
+
+        int availableQuantity = cartItem.getProduct().getQuantity() - activeOtherReservations;
+
+        if (quantity > availableQuantity) {
+            throw new IllegalArgumentException("Cannot update quantity. Available stock after active reservations: " + availableQuantity);
         }
 
         cartItem.setQuantity(quantity);
+        cartItem.setReservedAt(java.time.LocalDateTime.now());
         return cartItemRepository.save(cartItem);
     }
 
@@ -108,5 +138,16 @@ public class CartService {
                 .sum();
 
         return new CartSummary(totalItems, totalQuantity, totalPrice);
+    }
+
+    @Transactional
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000)
+    public void purgeExpiredReservations() {
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusMinutes(10);
+        List<CartItem> expiredItems = cartItemRepository.findByReservedAtBefore(threshold);
+        if (!expiredItems.isEmpty()) {
+            cartItemRepository.deleteAll(expiredItems);
+            System.out.println("Purged " + expiredItems.size() + " expired cart item reservations.");
+        }
     }
 }

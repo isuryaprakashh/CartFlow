@@ -26,4 +26,7 @@ public class CartItem {
 
     @Column(nullable = false)
     private Integer quantity;
+
+    @Column(name = "reserved_at")
+    private java.time.LocalDateTime reservedAt;
 }
