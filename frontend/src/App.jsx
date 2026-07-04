@@ -35,7 +35,7 @@ function Footer() {
             CartFlow.
           </div>
           <p className="footer-desc">
-            A modern shopping cart management system built with React, Spring Boot, and MySQL.
+            A modern shopping cart management system to
             Manage products and cart items with ease.
           </p>
           <div className="footer-socials">
